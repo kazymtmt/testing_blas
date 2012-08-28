@@ -88,13 +88,16 @@ int main(int argc, char *argv[])
   precision *C = (precision *)memalign(256, max_size*max_size*sizeof(precision));
   precision *D = NULL;
 
-  //bufA = clCreateBuffer(ctx, CL_MEM_READ_ONLY, MAX_SIZE*MAX_SIZE * sizeof(*A),
-  //                      NULL, &err);
-  //bufB = clCreateBuffer(ctx, CL_MEM_READ_ONLY, MAX_SIZE*MAX_SIZE * sizeof(*B),
-  //                      NULL, &err);
-  //bufC = clCreateBuffer(ctx, CL_MEM_READ_WRITE, MAX_SIZE*MAX_SIZE * sizeof(*C),
-  //                      NULL, &err);
+  bufA = clCreateBuffer(ctx, CL_MEM_READ_ONLY, max_size*max_size * sizeof(*A), NULL, &err);
+  bufB = clCreateBuffer(ctx, CL_MEM_READ_ONLY, max_size*max_size * sizeof(*B), NULL, &err);
+  bufC = clCreateBuffer(ctx, CL_MEM_READ_WRITE, max_size*max_size * sizeof(*C), NULL, &err);
   srand(time(NULL));
+
+  // Dummy
+  CLBLAS_GEMM(order, transa, transb, 1, 1, 1, alpha, bufA,
+      1, bufB, 1, beta, bufC, 1, 1, &queue,
+      0, NULL, &event);
+  err = clFinish(queue);
 
   for (int M = stride; M <= max_size; M += stride) {
     int N, K, lda, ldb, ldc;
@@ -109,24 +112,15 @@ int main(int argc, char *argv[])
       ldb = (TransB == CblasTrans) ? K : N;
       ldc = N;
     }
-    bufA = clCreateBuffer(ctx, CL_MEM_READ_ONLY,  M*K * sizeof(*A),
-        NULL, &err);
-    bufB = clCreateBuffer(ctx, CL_MEM_READ_ONLY,  K*N * sizeof(*B),
-        NULL, &err);
-    bufC = clCreateBuffer(ctx, CL_MEM_READ_WRITE, M*N * sizeof(*C),
-        NULL, &err);
 
     for(int i = 0; i < M*K; i++) A[i] = (precision)rand()/(RAND_MAX);
     for(int i = 0; i < K*N; i++) B[i] = (precision)rand()/(RAND_MAX);
     for(int i = 0; i < M*N; i++) C[i] = (precision)rand()/(RAND_MAX);
 
-    err = clEnqueueWriteBuffer(queue, bufA, CL_TRUE, 0,
-        M * K * sizeof(*A), A, 0, NULL, NULL);
-    err = clEnqueueWriteBuffer(queue, bufB, CL_TRUE, 0,
-        K * N * sizeof(*B), B, 0, NULL, NULL);
-    err = clEnqueueWriteBuffer(queue, bufC, CL_TRUE, 0,
-        M * N * sizeof(*C), C, 0, NULL, NULL);
-
+    err = clEnqueueWriteBuffer(queue, bufA, CL_TRUE, 0, M*K*sizeof(*A), A, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(queue, bufB, CL_TRUE, 0, K*N*sizeof(*B), B, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(queue, bufC, CL_TRUE, 0, M*N*sizeof(*C), C, 0, NULL, NULL);
+        
 #ifdef TESTING_DOUBLE_PRECISION
     putchar('D');
 #else
@@ -143,7 +137,6 @@ int main(int argc, char *argv[])
     if (error_check) {
       D = (precision *)memalign(256, M*N*sizeof(precision));
       memcpy(D, C, M*N*sizeof(*C));
-      /* Call clAmdBlas function. */
       err = CLBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
           lda, bufB, ldb, beta, bufC, ldc, 1, &queue,
           0, NULL, &event);
@@ -151,10 +144,8 @@ int main(int argc, char *argv[])
         printf("CLBLAS_GEMM() failed with %d\n", err);
         return 1;
       }
-      /* Wait for calculations to be finished. */
       //err = clWaitForEvents(1, &event);
       err = clFinish(queue);
-      /* Fetch results of calculations from GPU memory. */
       err = clEnqueueReadBuffer(queue, bufC, CL_TRUE, 0,
           M * N * sizeof(*C),
           C, 0, NULL, NULL);
@@ -162,13 +153,13 @@ int main(int argc, char *argv[])
       error_check_gemm(C, D, M, N);
       free(D);
     } else {
-      comp_time = get_current_time();
-      CLBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
-              lda, bufB, ldb, beta, bufC, ldc, 1, &queue,
-              0, NULL, &event);
-      err = clFinish(queue);
-      comp_time = get_current_time() - comp_time;
-      printf(" : %10.6lf sec %10.5lf GFlop/s", comp_time, gflops/comp_time);
+      //comp_time = get_current_time();
+      //CLBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
+      //        lda, bufB, ldb, beta, bufC, ldc, 1, &queue,
+      //        0, NULL, &event);
+      //err = clFinish(queue);
+      //comp_time = get_current_time() - comp_time;
+      //printf(" : %10.6lf sec %10.5lf GFlop/s", comp_time, gflops/comp_time);
     }
 
     comp_time = get_current_time();
@@ -179,20 +170,14 @@ int main(int argc, char *argv[])
     comp_time = get_current_time() - comp_time;
     printf(" : %10.6lf sec %10.5lf GFlop/s\n", comp_time, gflops/comp_time);
     fflush(stdout);
-
-    /* Release OpenCL memory objects. */
-    clReleaseMemObject(bufC);
-    clReleaseMemObject(bufB);
-    clReleaseMemObject(bufA);
   }
   free(A); free(B); free(C);
-
-  /* Finalize work with clAmdBlas. */
-  clAmdBlasTeardown();
-
-  /* Release OpenCL working objects. */
+  clReleaseMemObject(bufC);
+  clReleaseMemObject(bufB);
+  clReleaseMemObject(bufA);
   clReleaseCommandQueue(queue);
   clReleaseContext(ctx);
+  clAmdBlasTeardown();
 
   return ret;
   }

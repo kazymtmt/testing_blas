@@ -15,7 +15,7 @@ error_check = 0
     outfile += (transb == 0) ? "N" : "T"
     outfile += ".txt"
     puts outfile
-    max_size = (prog == "dgemm") ? 4096 : 4096
+    max_size = (prog == "dgemm") ? 5120 : 5120
     system "./#{prog} #{order} #{transa} #{transb} #{max_size} #{stride} #{error_check} | tee -a #{outfile}"
   end
 end

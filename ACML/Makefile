@@ -14,11 +14,12 @@ CFLAGS	= -I../include -I$(BLASDIR)/include  -std=c99 $(OPTS) -Wall
 LDFLAGS = -lgfortran -L$(BLASDIR)/lib -lacml_mp -fopenmp -lblas
 
 ## Open64
-#CC	= /opt/open64-5.0/bin/opencc
-#CC	= /opt/x86_open64-4.5.1/bin/opencc
+#BLASDIR	= /opt/acml5.1.0/open64_64_fma4_mp_int64
+#OPEN64DIR	= /opt/open64-5.0
+#CC	= $(OPEN64DIR)/bin/opencc
 #OPTS	= -O2 -mp -mfma4
-#CFLAGS	= -I$(BLASDIR)/include  -std=c99 $(OPTS) -Wall
-#LDFLAGS = -L/opt/open64-5.0/lib/gcc-lib/x86_64-open64-linux/5.0/64 -L/opt/open64-5.0/lib/gcc-lib/x86_64-open64-linux/5.0/64 -lfortran -L$(BLASDIR)/lib -lacml_mp -lffio -mp
+#CFLAGS	= -I$(BLASDIR)/include -std=c99 $(OPTS) -Wall
+#LDFLAGS = -L$(OPEN64DIR)/lib/gcc-lib/x86_64-open64-linux/5.0/64 -L$(OPEN64DIR)/lib/gcc-lib/x86_64-open64-linux/5.0/64 -lfortran -L$(BLASDIR)/lib -lacml_mp -lffio -mp
 
 .PHONY: all clean test
 

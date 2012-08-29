@@ -7,7 +7,7 @@ TARGETS = dgemm sgemm
 CC	= gcc
 CXX	= g++
 
-OPTS	= -O2 -fopenmp #-mavx
+OPTS	= -O2 #-fopenmp #-mavx
 #OPTS	= -O2 -fopenmp -msse3
 
 ifndef AMDAPPSDKROOT
@@ -28,10 +28,10 @@ endif
 
 all: $(TARGETS)
 
-sgemm: gemm.c
-	$(CC) $(CFLAGS) $< $(LDFLAGS) -o $@
 dgemm: gemm.c
 	$(CC) -DTESTING_DOUBLE_PRECISION $(CFLAGS) $< $(LDFLAGS) -o $@
+sgemm: gemm.c
+	$(CC) $(CFLAGS) $< $(LDFLAGS) -o $@
 
 clean:
 	$(RM) $(TARGETS)

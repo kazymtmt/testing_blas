@@ -9,37 +9,15 @@ typedef float precision;
 #endif
 
 #include <malloc.h>
-#include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/types.h>
 #include <time.h>
 
 #include <cblas.h>
 #include <clAmdBlas.h>
 
-double get_current_time(void)
-{
-  static struct timeval now;
-  gettimeofday(&now, NULL);
-  return (double)(now.tv_sec  + now.tv_usec/1000000.0);
-}
-
-static void error_check_gemm(const precision *C, const precision *D, const int m, const int n)
-{
-  double accu = 0.0;
-  for (int i = 0; i < m*n; i++) {
-    //double dx = fabs((double)C[i]-D[i]);
-    double dx = fabs(((double)C[i]-D[i])/D[i]);
-    //printf("[%d %d] %e (%f %f)\n", i/n, i%n, dx, C[i], D[i]);
-    if (dx > accu) {
-      accu = dx;
-    }
-  }
-  printf(" : %e [%s]", accu, (accu < 1e-4) ? "PASSED" : "FAILED");
-}
+#include "testing.h"
 
 int main(int argc, char *argv[])
 {
@@ -56,16 +34,16 @@ int main(int argc, char *argv[])
   cl_event event = NULL;
   int ret = 0;
 
-  clAmdBlasOrder order = (argc <= 1) ? clAmdBlasColumnMajor: ((atoi(argv[1])==0) ? clAmdBlasColumnMajor : clAmdBlasRowMajor);
-  clAmdBlasTranspose transa = (argc <= 2) ? clAmdBlasNoTrans : ((atoi(argv[2])==0) ? clAmdBlasNoTrans : clAmdBlasTrans);
-  clAmdBlasTranspose transb = (argc <= 3) ? clAmdBlasNoTrans : ((atoi(argv[3])==0) ? clAmdBlasNoTrans : clAmdBlasTrans);
+  enum CBLAS_ORDER Order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
+  enum CBLAS_TRANSPOSE TransA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
+  enum CBLAS_TRANSPOSE TransB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
   int max_size = (argc <= 4) ? 32 : atoi(argv[4]);
   int stride = (argc <= 5) ? 1 : atoi(argv[5]);
   int error_check = (argc <= 6) ? 0 : atoi(argv[6]);
 
-  enum CBLAS_ORDER Order = (order == clAmdBlasColumnMajor) ? CblasColMajor : CblasRowMajor;
-  enum CBLAS_TRANSPOSE TransA = (transa == clAmdBlasNoTrans) ? CblasNoTrans : CblasTrans;
-  enum CBLAS_TRANSPOSE TransB = (transb == clAmdBlasNoTrans) ? CblasNoTrans : CblasTrans;
+  clAmdBlasOrder order = (Order == CblasColMajor) ? clAmdBlasColumnMajor : clAmdBlasRowMajor;
+  clAmdBlasTranspose transa = (TransA == CblasNoTrans) ? clAmdBlasNoTrans : clAmdBlasTrans;
+  clAmdBlasTranspose transb = (TransB == CblasNoTrans) ? clAmdBlasNoTrans : clAmdBlasTrans;
 
   /* Setup OpenCL environment. */
   err = clGetPlatformIDs(1, &platform, NULL);
@@ -86,10 +64,10 @@ int main(int argc, char *argv[])
   precision *A = (precision *)memalign(256, max_size*max_size*sizeof(precision));
   precision *B = (precision *)memalign(256, max_size*max_size*sizeof(precision));
   precision *C = (precision *)memalign(256, max_size*max_size*sizeof(precision));
-  precision *D = NULL;
+  precision *D = (precision *)memalign(256, max_size*max_size*sizeof(precision));
 
-  bufA = clCreateBuffer(ctx, CL_MEM_READ_ONLY, max_size*max_size * sizeof(*A), NULL, &err);
-  bufB = clCreateBuffer(ctx, CL_MEM_READ_ONLY, max_size*max_size * sizeof(*B), NULL, &err);
+  bufA = clCreateBuffer(ctx, CL_MEM_READ_ONLY,  max_size*max_size * sizeof(*A), NULL, &err);
+  bufB = clCreateBuffer(ctx, CL_MEM_READ_ONLY,  max_size*max_size * sizeof(*B), NULL, &err);
   bufC = clCreateBuffer(ctx, CL_MEM_READ_WRITE, max_size*max_size * sizeof(*C), NULL, &err);
   srand(time(NULL));
 
@@ -135,7 +113,6 @@ int main(int argc, char *argv[])
     gflops /= 1e9;
     double comp_time;
     if (error_check) {
-      D = (precision *)memalign(256, M*N*sizeof(precision));
       memcpy(D, C, M*N*sizeof(*C));
       err = CLBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
           lda, bufB, ldb, beta, bufC, ldc, 1, &queue,
@@ -151,7 +128,6 @@ int main(int argc, char *argv[])
           C, 0, NULL, NULL);
       CBLAS_GEMM(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, D, ldc);
       error_check_gemm(C, D, M, N);
-      free(D);
     } else {
       //comp_time = get_current_time();
       //CLBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
@@ -171,7 +147,7 @@ int main(int argc, char *argv[])
     printf(" : %10.6lf sec %10.5lf GFlop/s\n", comp_time, gflops/comp_time);
     fflush(stdout);
   }
-  free(A); free(B); free(C);
+  free(A); free(B); free(C); free(D);
   clReleaseMemObject(bufC);
   clReleaseMemObject(bufB);
   clReleaseMemObject(bufA);

@@ -1,10 +1,10 @@
 #ifdef TESTING_DOUBLE_PRECISION
 typedef double precision;
-#define CLBLAS_GEMM clAmdBlasDgemm
+#define TESTBLAS_GEMM clAmdBlasDgemm
 #define CBLAS_GEMM cblas_dgemm
 #else
 typedef float precision;
-#define CLBLAS_GEMM clAmdBlasSgemm
+#define TESTBLAS_GEMM clAmdBlasSgemm
 #define CBLAS_GEMM cblas_sgemm
 #endif
 
@@ -34,16 +34,16 @@ int main(int argc, char *argv[])
   cl_event event = NULL;
   int ret = 0;
 
-  enum CBLAS_ORDER Order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
-  enum CBLAS_TRANSPOSE TransA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
-  enum CBLAS_TRANSPOSE TransB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
-  int max_size = (argc <= 4) ? 32 : atoi(argv[4]);
-  int stride = (argc <= 5) ? 1 : atoi(argv[5]);
-  int error_check = (argc <= 6) ? 0 : atoi(argv[6]);
+  const enum CBLAS_ORDER Order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
+  const enum CBLAS_TRANSPOSE TransA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
+  const enum CBLAS_TRANSPOSE TransB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
+  const int max_size = (argc <= 4) ? 32 : atoi(argv[4]);
+  const int stride = (argc <= 5) ? 1 : atoi(argv[5]);
+  const int error_check = (argc <= 6) ? 0 : atoi(argv[6]);
 
-  clAmdBlasOrder order = (Order == CblasColMajor) ? clAmdBlasColumnMajor : clAmdBlasRowMajor;
-  clAmdBlasTranspose transa = (TransA == CblasNoTrans) ? clAmdBlasNoTrans : clAmdBlasTrans;
-  clAmdBlasTranspose transb = (TransB == CblasNoTrans) ? clAmdBlasNoTrans : clAmdBlasTrans;
+  const clAmdBlasOrder order = (Order == CblasColMajor) ? clAmdBlasColumnMajor : clAmdBlasRowMajor;
+  const clAmdBlasTranspose transa = (TransA == CblasNoTrans) ? clAmdBlasNoTrans : clAmdBlasTrans;
+  const clAmdBlasTranspose transb = (TransB == CblasNoTrans) ? clAmdBlasNoTrans : clAmdBlasTrans;
 
   /* Setup OpenCL environment. */
   err = clGetPlatformIDs(1, &platform, NULL);
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
   srand(time(NULL));
 
   // Dummy
-  CLBLAS_GEMM(order, transa, transb, 1, 1, 1, alpha, bufA,
+  TESTBLAS_GEMM(order, transa, transb, 1, 1, 1, alpha, bufA,
       1, bufB, 1, beta, bufC, 1, 1, &queue,
       0, NULL, &event);
   err = clFinish(queue);
@@ -114,11 +114,11 @@ int main(int argc, char *argv[])
     double comp_time;
     if (error_check) {
       memcpy(D, C, M*N*sizeof(*C));
-      err = CLBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
+      err = TESTBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
           lda, bufB, ldb, beta, bufC, ldc, 1, &queue,
           0, NULL, &event);
       if (err != CL_SUCCESS) {
-        printf("CLBLAS_GEMM() failed with %d\n", err);
+        printf("TESTBLAS_GEMM() failed with %d\n", err);
         return 1;
       }
       //err = clWaitForEvents(1, &event);
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
       error_check_gemm(C, D, M, N);
     } else {
       //comp_time = get_current_time();
-      //CLBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
+      //TESTBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
       //        lda, bufB, ldb, beta, bufC, ldc, 1, &queue,
       //        0, NULL, &event);
       //err = clFinish(queue);
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
     }
 
     comp_time = get_current_time();
-    CLBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
+    TESTBLAS_GEMM(order, transa, transb, M, N, K, alpha, bufA,
         lda, bufB, ldb, beta, bufC, ldc, 1, &queue,
         0, NULL, &event);
     err = clFinish(queue);

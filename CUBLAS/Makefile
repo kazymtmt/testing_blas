@@ -16,13 +16,13 @@ LDFLAGS = -L/usr/local/cuda/lib64 -lcuda -lcublas -L/usr/bin -lblas -lc
 all: $(TARGETS)
 
 dgemm: gemm.c
-	$(CC) $(CFLAGS) $< $(LDFLAGS) -o $@
-sgemm: gemm.c
 	$(CC) -DTESTING_DOUBLE_PRECISION $(CFLAGS) $< $(LDFLAGS) -o $@
+sgemm: gemm.c
+	$(CC) $(CFLAGS) $< $(LDFLAGS) -o $@
 
 clean:
 	$(RM) $(TARGETS)
 
 test: all
-	./dgemm 0 0 0 128 16 1
-	./sgemm 0 0 0 128 16 1
+	./dgemm 0 0 0 256 16 1
+	./sgemm 0 0 0 256 16 1

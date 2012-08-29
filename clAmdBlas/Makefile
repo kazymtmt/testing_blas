@@ -1,8 +1,7 @@
 #BLASDIR	= /opt/clAmdBlas-1.6.236
 #BLASDIR	= /opt/clAmdBlas-1.7.257
 BLASDIR	= /opt/clAmdBlas-1.8.269
-LIBLABEL = clAmdBlas
-TARGETS = dgemm sgemm
+TARGETS	= dgemm sgemm
 
 CC	= gcc
 CXX	= g++
@@ -37,5 +36,5 @@ clean:
 	$(RM) $(TARGETS)
 
 test: all
-	./dgemm 0 0 0 128 16 1
-	./sgemm 0 0 0 128 16 1
+	./dgemm 0 0 0 256 16 1
+	./sgemm 0 0 0 256 16 1

@@ -1,10 +1,10 @@
 #ifdef TESTING_DOUBLE_PRECISION
 typedef double precision;
-#define CUBLAS_GEMM cublasDgemm_v2
+#define TESTBLAS_GEMM cublasDgemm_v2
 #define CBLAS_GEMM cblas_dgemm
 #else
 typedef float precision;
-#define CUBLAS_GEMM cublasSgemm_v2
+#define TESTBLAS_GEMM cublasSgemm_v2
 #define CBLAS_GEMM cblas_sgemm
 #endif
 
@@ -26,15 +26,15 @@ int main(int argc, char *argv[])
 
   int ret = 0;
 
-  enum CBLAS_ORDER Order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
-  enum CBLAS_TRANSPOSE TransA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
-  enum CBLAS_TRANSPOSE TransB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
-  int max_size = (argc <= 4) ? 32 : atoi(argv[4]);
-  int stride = (argc <= 5) ? 1 : atoi(argv[5]);
-  int error_check = (argc <= 6) ? 0 : atoi(argv[6]);
+  const enum CBLAS_ORDER Order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
+  const enum CBLAS_TRANSPOSE TransA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
+  const enum CBLAS_TRANSPOSE TransB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
+  const int max_size = (argc <= 4) ? 32 : atoi(argv[4]);
+  const int stride = (argc <= 5) ? 1 : atoi(argv[5]);
+  const int error_check = (argc <= 6) ? 0 : atoi(argv[6]);
 
-  cublasOperation_t transa = (TransA == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-  cublasOperation_t transb = (TransB == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  const cublasOperation_t transa = (TransA == CblasNoTrans) ? TESTBLAS_OP_N : TESTBLAS_OP_T;
+  const cublasOperation_t transb = (TransB == CblasNoTrans) ? TESTBLAS_OP_N : TESTBLAS_OP_T;
 
   //cublasStatus stat;
   precision *bufA, *bufB, *bufC;
@@ -103,9 +103,9 @@ int main(int argc, char *argv[])
       memcpy(D, C, M*N*sizeof(*C));
       cudaEventRecord(start, stream);
       if (Order == CblasColMajor) {
-        CUBLAS_GEMM(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
+        TESTBLAS_GEMM(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
       } else {
-        CUBLAS_GEMM(handle, transb, transa, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
+        TESTBLAS_GEMM(handle, transb, transa, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
       }
       cudaEventRecord(end, stream);
       cudaEventSynchronize(end);
@@ -116,9 +116,9 @@ int main(int argc, char *argv[])
       ////comp_time = get_current_time();
       //cudaEventRecord(start, stream);
       //if (Order == CblasColMajor) {
-      //    CUBLAS_GEMM(handle, transA, transB, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
+      //    TESTBLAS_GEMM(handle, transA, transB, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
       //} else {
-      //    CUBLAS_GEMM(handle, transB, transA, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
+      //    TESTBLAS_GEMM(handle, transB, transA, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
       //}
       //cudaEventRecord(end, stream);
       //cudaEventSynchronize(end);
@@ -131,9 +131,9 @@ int main(int argc, char *argv[])
     //comp_time = get_current_time();
     cudaEventRecord(start, stream);
     if (Order == CblasColMajor) {
-      CUBLAS_GEMM(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
+      TESTBLAS_GEMM(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
     } else {
-      CUBLAS_GEMM(handle, transb, transa, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
+      TESTBLAS_GEMM(handle, transb, transa, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
     }
     cudaEventRecord(end, stream);
     cudaEventSynchronize(end);

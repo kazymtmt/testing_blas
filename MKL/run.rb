@@ -1,7 +1,7 @@
 Dir.mkdir "dat" unless File.exist? "dat"
 
-order = 0
-transa = 0
+order = 1
+transa = 1
 transb = 0
 stride = 1
 error_check = 0

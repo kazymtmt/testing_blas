@@ -33,8 +33,8 @@ int main(int argc, char *argv[])
   const int stride = (argc <= 5) ? 1 : atoi(argv[5]);
   const int error_check = (argc <= 6) ? 0 : atoi(argv[6]);
 
-  const cublasOperation_t transa = (TransA == CblasNoTrans) ? TESTBLAS_OP_N : TESTBLAS_OP_T;
-  const cublasOperation_t transb = (TransB == CblasNoTrans) ? TESTBLAS_OP_N : TESTBLAS_OP_T;
+  const cublasOperation_t transa = (TransA == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  const cublasOperation_t transb = (TransB == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
 
   //cublasStatus stat;
   precision *bufA, *bufB, *bufC;
@@ -143,9 +143,9 @@ int main(int argc, char *argv[])
     printf(" : %10.6lf sec %10.5lf GFlop/s\n", comp_time, gflops/comp_time);
     fflush(stdout);
 
-    cudaFree(bufC);
-    cudaFree(bufB);
     cudaFree(bufA);
+    cudaFree(bufB);
+    cudaFree(bufC);
   }
   cudaEventDestroy(end);
   cudaEventDestroy(start);

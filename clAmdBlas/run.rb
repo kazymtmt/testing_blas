@@ -1,13 +1,12 @@
 Dir.mkdir "dat" unless File.exist? "dat"
 
-order = 1
-stride = 1
+order = 0
+stride = 16
 error_check = 0
 
 5.times do
   [0,1].each do |transa|
-    #[0,1].each do |transb|
-    [0].each do |transb|
+    [0,1].each do |transb|
       ["dgemm","sgemm"].each do |prog|
         outfile = "dat/clAmdBlas1.8.269_#{`hostname`.chop}_#{prog}_"
         #outfile = "dat/clAmdBlas1.7.257_#{`hostname`.chop}_#{prog}_"
@@ -16,8 +15,8 @@ error_check = 0
         outfile += (transb == 0) ? "N" : "T"
         outfile += ".txt"
         puts outfile
-        #max_size = (prog == "dgemm") ? 7200 : 8192
-        max_size = (prog == "dgemm") ? 5120 : 6144
+        max_size = (prog == "dgemm") ? 9000 : 13000
+        #max_size = (prog == "dgemm") ? 5120 : 6144
         system "./#{prog} #{order} #{transa} #{transb} #{max_size} #{stride} #{error_check} | tee -a #{outfile}"
       end
     end

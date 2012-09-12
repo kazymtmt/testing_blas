@@ -2,8 +2,8 @@
 BLASDIR	= /usr/local/cuda-5.0
 TARGETS	= dgemm sgemm
 
-CC	= LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu /usr/local/cuda/bin/nvcc
-CXX	= /usr/bin/g++
+CC	= /usr/local/cuda/bin/nvcc
+#CXX	= /usr/bin/g++
 
 OPTS	= -O2 #-fopenmp #-mavx
 #OPTS	= -O2 -fopenmp -msse3

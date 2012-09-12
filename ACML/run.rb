@@ -1,10 +1,10 @@
 Dir.mkdir "dat" unless File.exist? "dat"
 
-stride = 256
+stride = 16
 error_check = 0
 
 5.times do
-  [0,1].each do |order|
+  [0].each do |order|
     [0,1].each do |transa|
       [0,1].each do |transb|
         ["dgemm","sgemm"].each do |prog|

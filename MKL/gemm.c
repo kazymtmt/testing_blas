@@ -78,15 +78,15 @@ int main(int argc, char *argv[])
       CBLAS_GEMM(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, D, ldc);
       error_check_gemm(C, D, M, N);
     } else {
-      //comp_time = get_current_time();
+      //comp_time = my_get_current_time();
       //TESTBLAS_GEMM(order, transa, transb, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
-      //comp_time = get_current_time() - comp_time;
+      //comp_time = my_get_current_time() - comp_time;
       //printf(" : %10.6lf sec %10.5lf GFlop/s", comp_time, gflops/comp_time);
     }
 
-    comp_time = get_current_time();
+    comp_time = my_get_current_time();
     TESTBLAS_GEMM(order, transa, transb, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
-    comp_time = get_current_time() - comp_time;
+    comp_time = my_get_current_time() - comp_time;
     printf(" : %10.6lf sec %10.5lf GFlop/s\n", comp_time, gflops/comp_time);
     fflush(stdout);
   }

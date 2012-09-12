@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
       CBLAS_GEMM(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, D, ldc);
       error_check_gemm(C, D, M, N);
     } else {
-      ////comp_time = get_current_time();
+      ////comp_time = my_get_current_time();
       //cudaEventRecord(start, stream);
       //if (Order == CblasColMajor) {
       //    TESTBLAS_GEMM(handle, transA, transB, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
@@ -124,11 +124,11 @@ int main(int argc, char *argv[])
       //cudaEventSynchronize(end);
       //cudaEventElapsedTime(&comp_time, start, end);
       //comp_time /= 1e3;
-      ////comp_time = get_current_time() - comp_time;
+      ////comp_time = my_get_current_time() - comp_time;
       //printf(" : %10.6lf sec %10.5lf GFlop/s\n", comp_time, gflops/comp_time);
     }
 
-    //comp_time = get_current_time();
+    //comp_time = my_get_current_time();
     cudaEventRecord(start, stream);
     if (Order == CblasColMajor) {
       TESTBLAS_GEMM(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
     cudaEventSynchronize(end);
     cudaEventElapsedTime(&comp_time, start, end);
     comp_time /= 1e3;
-    //comp_time = get_current_time() - comp_time;
+    //comp_time = my_get_current_time() - comp_time;
     printf(" : %10.6lf sec %10.5lf GFlop/s\n", comp_time, gflops/comp_time);
     fflush(stdout);
 

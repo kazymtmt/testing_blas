@@ -83,23 +83,23 @@ int main(int argc, char *argv[])
       CBLAS_GEMM(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, D, ldc);
       error_check_gemm(C, D, M, N);
     } else {
-      //comp_time = get_current_time();
+      //comp_time = my_get_current_time();
       //if (Order == CblasColMajor) {
       //  TESTBLAS_GEMM(transa, transb, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
       //} else {
       //  TESTBLAS_GEMM(transb, transa, N, M, K, alpha, B, ldb, A, lda, beta, C, ldc);
       //}
-      //comp_time = get_current_time() - comp_time;
+      //comp_time = my_get_current_time() - comp_time;
       //printf(" : %10.6lf sec %10.5lf GFlop/s", comp_time, gflops/comp_time);
     }
 
-    comp_time = get_current_time();
+    comp_time = my_get_current_time();
     if (Order == CblasColMajor) {
       TESTBLAS_GEMM(transa, transb, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
     } else {
       TESTBLAS_GEMM(transb, transa, N, M, K, alpha, B, ldb, A, lda, beta, C, ldc);
     }
-    comp_time = get_current_time() - comp_time;
+    comp_time = my_get_current_time() - comp_time;
     printf(" : %10.6lf sec %10.5lf GFlop/s\n", comp_time, gflops/comp_time);
     fflush(stdout);
   }

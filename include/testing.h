@@ -4,7 +4,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-double get_current_time(void)
+double my_get_current_time(void)
 {
   static struct timeval now;
   gettimeofday(&now, NULL);

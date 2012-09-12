@@ -1,10 +1,9 @@
-#BLASDIR	= /usr/local/cuda-4.2
-#BLASDIR	= /usr/local/cuda-5.0
-BLASDIR	= /opt/CUDA/4.1.28/cudatoolkit
+BLASDIR	= $(HOME)/magma-1.2.1
+CUDADIR	= /opt/CUDA/4.1.28/cudatoolkit
 TARGETS	= dgemm sgemm
 
 #CC	= /usr/local/cuda/bin/nvcc
-CC	= $(BLASDIR)/bin/nvcc
+CC	= nvcc
 #CXX	= /usr/bin/g++
 
 OPTS	= -O2 #-fopenmp #-mavx
@@ -12,7 +11,7 @@ OPTS	= -O2 #-fopenmp #-mavx
 PROC_TYPE	= $(strip $(shell uname -m | grep 64))
 
 CFLAGS	= -I../include -I$(BLASDIR)/include $(OPTIM) -I/usr/include/x86_64-linux-gnu -I.
-LDFLAGS = -L$(BLASDIR)/lib64 -L. -lcuda -lcublas -L/usr/bin -lblas -lc
+LDFLAGS = -L$(BLASDIR)/lib -L$(CUDADIR)/lib64 -L. -lcuda -lcublas -lmagma -lmagmablas -L/usr/bin -lblas -lc
 
 .PHONY: all clean test
 
@@ -27,5 +26,5 @@ clean:
 	$(RM) $(TARGETS)
 
 test: all
-	LD_LIBRARY_PATH=$(BLASDIR)/lib64 ./dgemm 0 0 0 256 16 1
-	LD_LIBRARY_PATH=$(BLASDIR)/lib64 ./sgemm 0 0 0 256 16 1
+	LD_LIBRARY_PATH=$(BLASDIR)/lib64:$(LD_LIBRARY_PATH) ./dgemm 0 0 0 1024 16 1
+	LD_LIBRARY_PATH=$(BLASDIR)/lib64:$(LD_LIBRARY_PATH) ./sgemm 0 0 0 1024 16 1

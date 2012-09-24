@@ -18,7 +18,7 @@ error_check = 0
           outfile += ".txt"
           puts outfile
           open(outfile, "a") do |w|
-	    max_size = (prog == "dgemm") ? 8300 : 11000
+	    max_size = (prog == "dgemm") ? 10500 : 12500
 	    #system "./#{prog} #{order} #{transa} #{transb} #{max_size} #{stride} #{error_check} | tee -a #{outfile}"
 	    res = `./#{prog} #{order} #{transa} #{transb} #{max_size} #{stride} #{error_check}`
             w << res

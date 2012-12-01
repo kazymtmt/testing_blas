@@ -1,0 +1,9 @@
+BLASDIR	= /usr/local/cuda-5.0
+
+CC	= $(BLASDIR)/bin/nvcc
+#CXX	= g++
+
+OPTS	= -O2
+CFLAGS	= -I../include -I/usr/include/atlas -I$(BLASDIR)/include $(OPTS) -I/usr/include/x86_64-linux-gnu -DADD_ -DTESTING_CUBLAS
+LDFLAGS = -L/usr/lib -lblas -llapack -lc -L$(BLASDIR)/lib64 -lcuda -lcublas
+

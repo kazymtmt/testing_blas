@@ -3,22 +3,31 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef TESTING_ATLAS
+#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_CUBLAS)
 #include <cblas.h>
 #include <clapack.h>
+#endif
+
+#if defined(TESTING_ATLAS)
 #define DGEMM_COL() cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
 #define DGEMM_ROW() cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+
 #elif defined(TESTING_MKL)
 #include <mkl_cblas.h>
 #include <mkl_lapack.h>
 #define DGEMM_COL() cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
 #define DGEMM_ROW() cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+
 #elif defined(TESTING_AMDCLBLAS)
-#include <cblas.h>
-#include <clapack.h>
 #include <clAmdBlas.h>
 #define DGEMM_COL() clAmdBlasDgemm(order, transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc, 1, &queue, 0, NULL, &event)
 #define DGEMM_ROW() clAmdBlasDgemm(order, transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc, 1, &queue, 0, NULL, &event)
+
+#elif defined(TESTING_CUBLAS)
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+#define DGEMM_COL() cublasDgemm(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
+#define DGEMM_ROW() cublasDgemm(handle, transb, transa, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
 #endif
 
 #include "flops.h"
@@ -31,10 +40,16 @@ int main(int argc, char *argv[])
   int ione = 1;
   int ISEED[4] = {1,0,0,1};
   double neg_one = D_NEG_ONE;
-  double start, end, comp_time, perf, error, work[1];
+  double comp_time, perf, error, work[1];
   int M, N, K, lda, ldb, ldc, sizeA, sizeB, sizeC;
+#if defined(TESTING_CUBLAS)
+   cudaEvent_t start, end;
+   float comp_time_f;
+#else
+   double start, end;
+#endif
 
-#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS)
+#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_CUBLAS)
   const enum CBLAS_ORDER Order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
   const enum CBLAS_TRANSPOSE TransA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
   const enum CBLAS_TRANSPOSE TransB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
@@ -47,12 +62,12 @@ int main(int argc, char *argv[])
   const int max_size = (argc <= 4) ? 32 : atoi(argv[4]);
   const int stride = (argc <= 5) ? 1 : atoi(argv[5]);
   const int error_check = (argc <= 6) ? 0 : atoi(argv[6]);
-  double *A  = (double *)memalign(256, max_size*max_size*sizeof(double));
-  double *B  = (double *)memalign(256, max_size*max_size*sizeof(double));
-  double *C  = (double *)memalign(256, max_size*max_size*sizeof(double));
-  double *C2 = (double *)memalign(256, max_size*max_size*sizeof(double));
+  double *A  = (double *)memalign(256, max_size*max_size*sizeof(alpha));
+  double *B  = (double *)memalign(256, max_size*max_size*sizeof(alpha));
+  double *C  = (double *)memalign(256, max_size*max_size*sizeof(alpha));
+  double *C2 = (double *)memalign(256, max_size*max_size*sizeof(alpha));
 
-#ifdef TESTING_AMDCLBLAS
+#if defined(TESTING_AMDCLBLAS)
   cl_int err;
   cl_platform_id platform;
   cl_device_id device;
@@ -79,9 +94,9 @@ int main(int argc, char *argv[])
     return 1;
   }
   // Create buffers
-  bufA = clCreateBuffer(ctx, CL_MEM_READ_ONLY,  max_size*max_size*sizeof(double), NULL, &err);
-  bufB = clCreateBuffer(ctx, CL_MEM_READ_ONLY,  max_size*max_size*sizeof(double), NULL, &err);
-  bufC = clCreateBuffer(ctx, CL_MEM_READ_WRITE, max_size*max_size*sizeof(double), NULL, &err);
+  bufA = clCreateBuffer(ctx, CL_MEM_READ_ONLY,  max_size*max_size*sizeof(*A), NULL, &err);
+  bufB = clCreateBuffer(ctx, CL_MEM_READ_ONLY,  max_size*max_size*sizeof(*B), NULL, &err);
+  bufC = clCreateBuffer(ctx, CL_MEM_READ_WRITE, max_size*max_size*sizeof(*C), NULL, &err);
   // Dummy
   M = N = K = lda = ldb = ldc = 512;
   if (Order == CblasColMajor) {
@@ -90,6 +105,20 @@ int main(int argc, char *argv[])
     DGEMM_ROW();
   }
   err = clFinish(queue);
+
+#elif defined(TESTING_CUBLAS)
+  const cublasOperation_t transa = (TransA == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  const cublasOperation_t transb = (TransB == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  //cublasStatus stat;
+  double *bufA, *bufB, *bufC;
+  // Initialize CUBLAS
+  cublasHandle_t handle;
+  cudaStream_t stream;
+  cublasCreate(&handle);
+  cudaStreamCreate(&stream);
+  cublasSetStream(handle, stream);
+  cudaEventCreate(&start);
+  cudaEventCreate(&end);
 #endif
 
   printf("               M    N    K\n");
@@ -112,12 +141,20 @@ int main(int argc, char *argv[])
     lapackf77_dlarnv(&ione, ISEED, &sizeA, A);
     lapackf77_dlarnv(&ione, ISEED, &sizeB, B);
     lapackf77_dlarnv(&ione, ISEED, &sizeC, C);
-    memcpy(C2, C, sizeC*sizeof(double));
+    memcpy(C2, C, sizeC*sizeof(*C));
 
-#ifdef TESTING_AMDCLBLAS
-    err = clEnqueueWriteBuffer(queue, bufA, CL_TRUE, 0, sizeA*sizeof(double), A, 0, NULL, NULL);
-    err = clEnqueueWriteBuffer(queue, bufB, CL_TRUE, 0, sizeB*sizeof(double), B, 0, NULL, NULL);
-    err = clEnqueueWriteBuffer(queue, bufC, CL_TRUE, 0, sizeC*sizeof(double), C, 0, NULL, NULL);
+#if defined(TESTING_AMDCLBLAS)
+    err = clEnqueueWriteBuffer(queue, bufA, CL_TRUE, 0, sizeA*sizeof(*A), A, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(queue, bufB, CL_TRUE, 0, sizeB*sizeof(*B), B, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(queue, bufC, CL_TRUE, 0, sizeC*sizeof(*C), C, 0, NULL, NULL);
+#elif defined(TESTING_CUBLAS)
+    // Prepare memory objects
+    cudaMalloc((void**)(&bufA), sizeA*sizeof(*A));
+    cudaMalloc((void**)(&bufB), sizeB*sizeof(*B));
+    cudaMalloc((void**)(&bufC), sizeC*sizeof(*C));
+    cudaMemcpy(bufA, A, sizeA*sizeof(*A), cudaMemcpyHostToDevice);
+    cudaMemcpy(bufB, B, sizeB*sizeof(*B), cudaMemcpyHostToDevice);
+    cudaMemcpy(bufC, C, sizeC*sizeof(*C), cudaMemcpyHostToDevice);
 #endif
 
     printf("dgemm %c%c%c : %4d %4d %4d",
@@ -127,22 +164,35 @@ int main(int argc, char *argv[])
         M, N, K);
 
     double flops = FLOPS_DGEMM(M, N, K);
+#if defined(TESTING_CUBLAS)
+    cudaEventRecord(start, stream);
+#else
     start = my_get_current_time();
+#endif
     if (Order == CblasColMajor) {
       DGEMM_COL();
     } else {
       DGEMM_ROW();
     }
-#ifdef TESTING_AMDCLBLAS
+#if defined(TESTING_AMDCLBLAS)
     err = clFinish(queue);
 #endif
+#if defined(TESTING_CUBLAS)
+    cudaEventRecord(end, stream);
+    cudaEventSynchronize(end);
+    cudaEventElapsedTime(&comp_time_f, start, end);
+    comp_time = comp_time_f / 1e3;
+#else
     end = my_get_current_time();
     comp_time = end - start;
+#endif
     perf = flops / comp_time / 1e9;
 
     if (error_check) {
-#ifdef TESTING_AMDCLBLAS
-      err = clEnqueueReadBuffer(queue, bufC, CL_TRUE, 0, M*N*sizeof(double), C, 0, NULL, NULL);
+#if defined(TESTING_AMDCLBLAS)
+      err = clEnqueueReadBuffer(queue, bufC, CL_TRUE, 0, sizeC*sizeof(*C), C, 0, NULL, NULL);
+#elif defined(TESTING_CUBLAS)
+      cudaMemcpy(C, bufC, sizeC*sizeof(*C), cudaMemcpyDeviceToHost);
 #endif
       cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C2, ldc);
       blasf77_daxpy(&sizeC, &neg_one, C, &ione, C2, &ione);
@@ -152,7 +202,11 @@ int main(int argc, char *argv[])
       printf(" : %10.6lf sec %12.6lf GFlop/s   -", comp_time, perf);
     }
 
+#if defined(TESTING_CUBLAS)
+    cudaEventRecord(start, stream);
+#else
     start = my_get_current_time();
+#endif
     if (Order == CblasColMajor) {
       DGEMM_COL();
     } else {
@@ -161,20 +215,39 @@ int main(int argc, char *argv[])
 #ifdef TESTING_AMDCLBLAS
     err = clFinish(queue);
 #endif
+#if defined(TESTING_CUBLAS)
+    cudaEventRecord(end, stream);
+    cudaEventSynchronize(end);
+    cudaEventElapsedTime(&comp_time_f, start, end);
+    comp_time = comp_time_f / 1e3;
+#else
     end = my_get_current_time();
     comp_time = end - start;
+#endif
     perf = flops / comp_time / 1e9;
     printf(" : %10.6lf sec %12.6lf GFlop/s\n", comp_time, perf);
+    fflush(stdout);
+
+#if defined(TESTING_CUBLAS)
+    cudaFree(bufA);
+    cudaFree(bufB);
+    cudaFree(bufC);
+#endif
   }
   free(A); free(B); free(C); free(C2);
-#ifdef TESTING_AMDCLBLAS
+#if defined(TESTING_AMDCLBLAS)
   clReleaseMemObject(bufC);
   clReleaseMemObject(bufB);
   clReleaseMemObject(bufA);
   clReleaseCommandQueue(queue);
   clReleaseContext(ctx);
   clAmdBlasTeardown();
+#elif defined(TESTING_CUBLAS)
+  cudaEventDestroy(end);
+  cudaEventDestroy(start);
+  cudaStreamDestroy(stream);
+  //cublasDestroy(handle);
 #endif
 
   return 0;
-  }
+}

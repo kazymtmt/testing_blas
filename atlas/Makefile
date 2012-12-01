@@ -1,5 +1,5 @@
 #BLASDIR	= /opt/intel/composer_xe_2011_sp1.10.319/mkl
-BLASDIR	= /opt/intel/composer_xe_2013.1.117/mkl
+BLASDIR	= /usr/local/atlas
 TARGETS	= dgemm sgemm
 
 CC	= gcc
@@ -9,7 +9,7 @@ OPTS	= -O2 -fopenmp -mavx
 #OPTS	= -O2 -fopenmp -msse3
 
 CFLAGS	= -I../include -I$(BLASDIR)/include  -std=c99 $(OPTS) -Wall
-LDFLAGS = -fopenmp -L$(BLASDIR)/lib/intel_64 -lmkl_core -lmkl_gnu_thread -lm -lmkl_intel_lp64
+LDFLAGS = -fopenmp -L$(BLASDIR)/lib -lptcblas -latlas
 
 .PHONY: all clean test
 

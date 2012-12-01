@@ -1,6 +1,7 @@
 #BLASDIR	= /opt/clAmdBlas-1.6.236
 #BLASDIR	= /opt/clAmdBlas-1.7.257
-BLASDIR	= /opt/clAmdBlas-1.8.269
+#BLASDIR	= /opt/clAmdBlas-1.8.269
+BLASDIR	= /opt/clAmdBlas-1.8.291
 TARGETS	= dgemm sgemm
 
 CC	= gcc

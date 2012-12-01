@@ -3,10 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef TESTING_ATLAS
 #include <cblas.h>
 #include <clapack.h>
-
-#ifdef TESTING_ATLAS
+#define DGEMM_COL() cblas_dgemm(order, transA, transB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+#define DGEMM_ROW() cblas_dgemm(order, transA, transB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+#elif defined(TESTING_MKL)
+#include <mkl_cblas.h>
+#include <mkl_lapack.h>
 #define DGEMM_COL() cblas_dgemm(order, transA, transB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
 #define DGEMM_ROW() cblas_dgemm(order, transA, transB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
 #endif
@@ -23,9 +27,15 @@ int main(int argc, char *argv[])
   double neg_one = D_NEG_ONE;
   double start, end, comp_time, perf, error, work[1];
 
+#ifdef TESTING_ATLAS
   const enum CBLAS_ORDER order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
   const enum CBLAS_TRANSPOSE transA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
   const enum CBLAS_TRANSPOSE transB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
+#else
+  const CBLAS_ORDER order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
+  const CBLAS_TRANSPOSE transA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
+  const CBLAS_TRANSPOSE transB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
+#endif
   const int max_size = (argc <= 4) ? 32 : atoi(argv[4]);
   const int stride = (argc <= 5) ? 1 : atoi(argv[5]);
   const int error_check = (argc <= 6) ? 0 : atoi(argv[6]);

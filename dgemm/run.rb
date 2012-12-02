@@ -1,7 +1,7 @@
 ROUTINE = "dgemm"
-STRIDE = 64
-MAX_SIZE = 4096
-TRIALS = 1
+STRIDE = 16
+MAX_SIZE = 8192
+TRIALS = 5
 
 def get_blaslib_name
   open("../Makefile.var", "r") do |r|

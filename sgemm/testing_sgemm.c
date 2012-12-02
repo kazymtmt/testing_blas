@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_ACML) || defined(TESTING_CUBLAS) || defined(TESTING_MAGMA)
+#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_ACML) || defined(TESTING_CUBLAS) || defined(TESTING_MAGMA) || defined(TESTING_OPENBLAS)
 #include <cblas.h>
 #include <clapack.h>
 #endif
 
-#if defined(TESTING_ATLAS)
+#if defined(TESTING_ATLAS) || defined(TESTING_OPENBLAS)
 #define SGEMM_COL() cblas_sgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
 #define SGEMM_ROW() cblas_sgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
 
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
    double start, end;
 #endif
 
-#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_ACML) || defined(TESTING_CUBLAS) || defined(TESTING_MAGMA)
+#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_ACML) || defined(TESTING_CUBLAS) || defined(TESTING_MAGMA) || defined(TESTING_OPENBLAS)
   const enum CBLAS_ORDER Order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
   const enum CBLAS_TRANSPOSE TransA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
   const enum CBLAS_TRANSPOSE TransB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_CUBLAS)
+#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_CUBLAS) || defined(TESTING_ACML)
 #include <cblas.h>
 #include <clapack.h>
 #endif
@@ -28,6 +28,12 @@
 #include <cublas_v2.h>
 #define DGEMM_COL() cublasDgemm(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
 #define DGEMM_ROW() cublasDgemm(handle, transb, transa, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
+
+#elif defined(TESTING_ACML)
+#include <acml.h>
+#define DGEMM_COL() dgemm(transa, transb, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+#define DGEMM_ROW() dgemm(transb, transa, N, K, K, alpha, B, ldb, A, lda, beta, C, ldc)
+
 #endif
 
 #include "flops.h"
@@ -49,7 +55,7 @@ int main(int argc, char *argv[])
    double start, end;
 #endif
 
-#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_CUBLAS)
+#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_CUBLAS) || defined(TESTING_ACML)
   const enum CBLAS_ORDER Order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
   const enum CBLAS_TRANSPOSE TransA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
   const enum CBLAS_TRANSPOSE TransB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
@@ -119,6 +125,10 @@ int main(int argc, char *argv[])
   cublasSetStream(handle, stream);
   cudaEventCreate(&start);
   cudaEventCreate(&end);
+
+#elif defined(TESTING_ACML)
+  const char transa = (TransA == CblasNoTrans) ? 'N' : 'T';
+  const char transb = (TransB == CblasNoTrans) ? 'N' : 'T';
 #endif
 
   printf("               M    N    K\n");
@@ -196,7 +206,11 @@ int main(int argc, char *argv[])
 #endif
       cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C2, ldc);
       blasf77_daxpy(&sizeC, &neg_one, C, &ione, C2, &ione);
+#if defined(TESTING_ACML)
+      error = lapackf77_dlange("M", &M, &N, C2, &ldc, work, ione);
+#else
       error = lapackf77_dlange("M", &M, &N, C2, &ldc, work);
+#endif
       printf(" : %10.6lf sec %12.6lf GFlop/s   %e", comp_time, perf, error);
     } else {
       printf(" : %10.6lf sec %12.6lf GFlop/s   -", comp_time, perf);

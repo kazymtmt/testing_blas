@@ -1,0 +1,8 @@
+BLASDIR	= /opt/OpenBLAS-0.2.5
+
+CC	= gcc
+CXX	= g++
+
+OPTS	= -O2 -fopenmp -mavx
+CFLAGS	= -I../include -I$(BLASDIR)/include  -std=c99 $(OPTS) -Wall -DADD_ -DTESTING_OPENBLAS
+LDFLAGS = -fopenmp -L/usr/lib -llapack $(BLASDIR)/lib/libopenblas.a

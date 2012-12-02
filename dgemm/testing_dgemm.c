@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_CUBLAS) || defined(TESTING_ACML)
+#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_ACML) || defined(TESTING_CUBLAS) || defined(TESTING_MAGMA)
 #include <cblas.h>
 #include <clapack.h>
 #endif
@@ -23,16 +23,21 @@
 #define DGEMM_COL() clAmdBlasDgemm(order, transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc, 1, &queue, 0, NULL, &event)
 #define DGEMM_ROW() clAmdBlasDgemm(order, transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc, 1, &queue, 0, NULL, &event)
 
+#elif defined(TESTING_ACML)
+#include <acml.h>
+#define DGEMM_COL() dgemm(transa, transb, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+#define DGEMM_ROW() dgemm(transb, transa, N, K, K, alpha, B, ldb, A, lda, beta, C, ldc)
+
 #elif defined(TESTING_CUBLAS)
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #define DGEMM_COL() cublasDgemm(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
 #define DGEMM_ROW() cublasDgemm(handle, transb, transa, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
 
-#elif defined(TESTING_ACML)
-#include <acml.h>
-#define DGEMM_COL() dgemm(transa, transb, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
-#define DGEMM_ROW() dgemm(transb, transa, N, K, K, alpha, B, ldb, A, lda, beta, C, ldc)
+#elif defined(TESTING_MAGMA)
+#include <magma.h>
+#define DGEMM_COL() magmablas_dgemm(transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc);
+#define DGEMM_ROW() magmablas_dgemm(transb, transa, N, M, K, alpha, bufB, ldb, bufA, lda, beta, bufC, ldc);
 
 #endif
 
@@ -55,7 +60,7 @@ int main(int argc, char *argv[])
    double start, end;
 #endif
 
-#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_CUBLAS) || defined(TESTING_ACML)
+#if defined(TESTING_ATLAS) || defined(TESTING_AMDCLBLAS) || defined(TESTING_ACML) || defined(TESTING_CUBLAS) || defined(TESTING_MAGMA)
   const enum CBLAS_ORDER Order = (argc <= 1) ? CblasColMajor : ((atoi(argv[1])==0) ? CblasColMajor : CblasRowMajor);
   const enum CBLAS_TRANSPOSE TransA = (argc <= 2) ? CblasNoTrans : ((atoi(argv[2])==0) ? CblasNoTrans : CblasTrans);
   const enum CBLAS_TRANSPOSE TransB = (argc <= 3) ? CblasNoTrans : ((atoi(argv[3])==0) ? CblasNoTrans : CblasTrans);
@@ -68,10 +73,18 @@ int main(int argc, char *argv[])
   const int max_size = (argc <= 4) ? 32 : atoi(argv[4]);
   const int stride = (argc <= 5) ? 1 : atoi(argv[5]);
   const int error_check = (argc <= 6) ? 0 : atoi(argv[6]);
-  double *A  = (double *)memalign(256, max_size*max_size*sizeof(alpha));
-  double *B  = (double *)memalign(256, max_size*max_size*sizeof(alpha));
-  double *C  = (double *)memalign(256, max_size*max_size*sizeof(alpha));
-  double *C2 = (double *)memalign(256, max_size*max_size*sizeof(alpha));
+  double *A, *B, *C, *C2;
+#ifdef TESTING_MAGMA
+  magma_malloc_cpu((void**) &A,  max_size*max_size*sizeof(double));
+  magma_malloc_cpu((void**) &B,  max_size*max_size*sizeof(double));
+  magma_malloc_cpu((void**) &C,  max_size*max_size*sizeof(double));
+  magma_malloc_cpu((void**) &C2, max_size*max_size*sizeof(double));
+#else
+  A  = (double *)memalign(256, max_size*max_size*sizeof(double));
+  B  = (double *)memalign(256, max_size*max_size*sizeof(double));
+  C  = (double *)memalign(256, max_size*max_size*sizeof(double));
+  C2 = (double *)memalign(256, max_size*max_size*sizeof(double));
+#endif
 
 #if defined(TESTING_AMDCLBLAS)
   cl_int err;
@@ -126,6 +139,17 @@ int main(int argc, char *argv[])
   cudaEventCreate(&start);
   cudaEventCreate(&end);
 
+#elif defined(TESTING_MAGMA)
+  const char transa = (TransA == CblasNoTrans) ? MagmaNoTrans : MagmaTrans;
+  const char transb = (TransB == CblasNoTrans) ? MagmaNoTrans : MagmaTrans;
+  //cublasStatus stat;
+  double *bufA, *bufB, *bufC;
+  // Initialize CUBLAS
+  if(CUBLAS_STATUS_SUCCESS != cublasInit()) {
+    fprintf(stderr, "cublasInit(): failed\n");
+    exit(1);
+  }
+
 #elif defined(TESTING_ACML)
   const char transa = (TransA == CblasNoTrans) ? 'N' : 'T';
   const char transb = (TransB == CblasNoTrans) ? 'N' : 'T';
@@ -165,6 +189,13 @@ int main(int argc, char *argv[])
     cudaMemcpy(bufA, A, sizeA*sizeof(*A), cudaMemcpyHostToDevice);
     cudaMemcpy(bufB, B, sizeB*sizeof(*B), cudaMemcpyHostToDevice);
     cudaMemcpy(bufC, C, sizeC*sizeof(*C), cudaMemcpyHostToDevice);
+#elif defined(TESTING_MAGMA)
+    magma_malloc((void**)(&bufA), sizeA*sizeof(*A));
+    magma_malloc((void**)(&bufB), sizeB*sizeof(*B));
+    magma_malloc((void**)(&bufC), sizeC*sizeof(*C));
+    magma_dsetmatrix(M, K, A, lda, bufA, lda);
+    magma_dsetmatrix(K, N, B, ldb, bufB, ldb);
+    magma_dsetmatrix(M, N, C, ldc, bufC, ldc);
 #endif
 
     printf("dgemm %c%c%c : %4d %4d %4d",
@@ -203,6 +234,8 @@ int main(int argc, char *argv[])
       err = clEnqueueReadBuffer(queue, bufC, CL_TRUE, 0, sizeC*sizeof(*C), C, 0, NULL, NULL);
 #elif defined(TESTING_CUBLAS)
       cudaMemcpy(C, bufC, sizeC*sizeof(*C), cudaMemcpyDeviceToHost);
+#elif defined(TESTING_MAGMA)
+      magma_dgetmatrix(M, N, bufC, ldc, C, ldc);
 #endif
       cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C2, ldc);
       blasf77_daxpy(&sizeC, &neg_one, C, &ione, C2, &ione);
@@ -246,6 +279,10 @@ int main(int argc, char *argv[])
     cudaFree(bufA);
     cudaFree(bufB);
     cudaFree(bufC);
+#elif defined(TESTING_MAGMA)
+    magma_free(bufA);
+    magma_free(bufB);
+    magma_free(bufC);
 #endif
   }
   free(A); free(B); free(C); free(C2);
@@ -260,7 +297,9 @@ int main(int argc, char *argv[])
   cudaEventDestroy(end);
   cudaEventDestroy(start);
   cudaStreamDestroy(stream);
-  //cublasDestroy(handle);
+  cublasDestroy(handle);
+#elif defined(TESTING_MAGMA)
+  cublasShutdown();
 #endif
 
   return 0;

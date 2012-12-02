@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
   const char transb = (TransB == CblasNoTrans) ? 'N' : 'T';
 #endif
 
-  printf("               M    N    K\n");
+  fprintf(stderr, "               M    N    K\n");
   for (M = stride; M <= max_size; M += stride) {
     N = K = M;
     //K = 128;

@@ -9,35 +9,35 @@
 #endif
 
 #if defined(TESTING_ATLAS)
-#define DGEMM_COL() cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
-#define DGEMM_ROW() cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+#define SGEMM_COL() cblas_sgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+#define SGEMM_ROW() cblas_sgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
 
 #elif defined(TESTING_MKL)
 #include <mkl_cblas.h>
 #include <mkl_lapack.h>
-#define DGEMM_COL() cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
-#define DGEMM_ROW() cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+#define SGEMM_COL() cblas_sgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+#define SGEMM_ROW() cblas_sgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
 
 #elif defined(TESTING_AMDCLBLAS)
 #include <clAmdBlas.h>
-#define DGEMM_COL() clAmdBlasDgemm(order, transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc, 1, &queue, 0, NULL, &event)
-#define DGEMM_ROW() clAmdBlasDgemm(order, transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc, 1, &queue, 0, NULL, &event)
+#define SGEMM_COL() clAmdBlasSgemm(order, transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc, 1, &queue, 0, NULL, &event)
+#define SGEMM_ROW() clAmdBlasSgemm(order, transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc, 1, &queue, 0, NULL, &event)
 
 #elif defined(TESTING_ACML)
 #include <acml.h>
-#define DGEMM_COL() dgemm(transa, transb, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
-#define DGEMM_ROW() dgemm(transb, transa, N, K, K, alpha, B, ldb, A, lda, beta, C, ldc)
+#define SGEMM_COL() sgemm(transa, transb, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc)
+#define SGEMM_ROW() sgemm(transb, transa, N, K, K, alpha, B, ldb, A, lda, beta, C, ldc)
 
 #elif defined(TESTING_CUBLAS)
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
-#define DGEMM_COL() cublasDgemm(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
-#define DGEMM_ROW() cublasDgemm(handle, transb, transa, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
+#define SGEMM_COL() cublasSgemm(handle, transa, transb, M, N, K, &alpha, bufA, lda, bufB, ldb, &beta, bufC, ldc);
+#define SGEMM_ROW() cublasSgemm(handle, transb, transa, N, M, K, &alpha, bufB, ldb, bufA, lda, &beta, bufC, ldc);
 
 #elif defined(TESTING_MAGMA)
 #include <magma.h>
-#define DGEMM_COL() magmablas_dgemm(transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc);
-#define DGEMM_ROW() magmablas_dgemm(transb, transa, N, M, K, alpha, bufB, ldb, bufA, lda, beta, bufC, ldc);
+#define SGEMM_COL() magmablas_sgemm(transa, transb, M, N, K, alpha, bufA, lda, bufB, ldb, beta, bufC, ldc);
+#define SGEMM_ROW() magmablas_sgemm(transb, transa, N, M, K, alpha, bufB, ldb, bufA, lda, beta, bufC, ldc);
 
 #endif
 
@@ -46,13 +46,13 @@
 
 int main(int argc, char *argv[])
 {
-  static const double alpha =  0.29;
-  static const double beta  = -0.48;
+  static const float alpha =  0.29;
+  static const float beta  = -0.48;
   int ione = 1;
   int ISEED[4] = {1,0,0,1};
-  double neg_one = D_NEG_ONE;
+  float neg_one = S_NEG_ONE;
   double comp_time, perf, error;
-  double work[1];
+  float work[1];
   int M, N, K, lda, ldb, ldc, sizeA, sizeB, sizeC;
 #if defined(TESTING_CUBLAS)
    cudaEvent_t start, end;
@@ -74,17 +74,17 @@ int main(int argc, char *argv[])
   const int max_size = (argc <= 4) ? 32 : atoi(argv[4]);
   const int stride = (argc <= 5) ? 1 : atoi(argv[5]);
   const int error_check = (argc <= 6) ? 0 : atoi(argv[6]);
-  double *A, *B, *C, *C2;
+  float *A, *B, *C, *C2;
 #ifdef TESTING_MAGMA
-  magma_malloc_cpu((void**) &A,  max_size*max_size*sizeof(double));
-  magma_malloc_cpu((void**) &B,  max_size*max_size*sizeof(double));
-  magma_malloc_cpu((void**) &C,  max_size*max_size*sizeof(double));
-  magma_malloc_cpu((void**) &C2, max_size*max_size*sizeof(double));
+  magma_malloc_cpu((void**) &A,  max_size*max_size*sizeof(float));
+  magma_malloc_cpu((void**) &B,  max_size*max_size*sizeof(float));
+  magma_malloc_cpu((void**) &C,  max_size*max_size*sizeof(float));
+  magma_malloc_cpu((void**) &C2, max_size*max_size*sizeof(float));
 #else
-  A  = (double *)memalign(256, max_size*max_size*sizeof(double));
-  B  = (double *)memalign(256, max_size*max_size*sizeof(double));
-  C  = (double *)memalign(256, max_size*max_size*sizeof(double));
-  C2 = (double *)memalign(256, max_size*max_size*sizeof(double));
+  A  = (float *)memalign(256, max_size*max_size*sizeof(float));
+  B  = (float *)memalign(256, max_size*max_size*sizeof(float));
+  C  = (float *)memalign(256, max_size*max_size*sizeof(float));
+  C2 = (float *)memalign(256, max_size*max_size*sizeof(float));
 #endif
 
 #if defined(TESTING_AMDCLBLAS)
@@ -120,9 +120,9 @@ int main(int argc, char *argv[])
   // Dummy
   M = N = K = lda = ldb = ldc = 512;
   if (Order == CblasColMajor) {
-    DGEMM_COL();
+    SGEMM_COL();
   } else {
-    DGEMM_ROW();
+    SGEMM_ROW();
   }
   err = clFinish(queue);
 
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
   const cublasOperation_t transa = (TransA == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
   const cublasOperation_t transb = (TransB == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
   //cublasStatus stat;
-  double *bufA, *bufB, *bufC;
+  float *bufA, *bufB, *bufC;
   // Initialize CUBLAS
   cublasHandle_t handle;
   cudaStream_t stream;
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
   const char transa = (TransA == CblasNoTrans) ? MagmaNoTrans : MagmaTrans;
   const char transb = (TransB == CblasNoTrans) ? MagmaNoTrans : MagmaTrans;
   //cublasStatus stat;
-  double *bufA, *bufB, *bufC;
+  float *bufA, *bufB, *bufC;
   // Initialize CUBLAS
   if(CUBLAS_STATUS_SUCCESS != cublasInit()) {
     fprintf(stderr, "cublasInit(): failed\n");
@@ -173,9 +173,9 @@ int main(int argc, char *argv[])
     sizeB = K*N;
     sizeC = M*N;
 
-    lapackf77_dlarnv(&ione, ISEED, &sizeA, A);
-    lapackf77_dlarnv(&ione, ISEED, &sizeB, B);
-    lapackf77_dlarnv(&ione, ISEED, &sizeC, C);
+    lapackf77_slarnv(&ione, ISEED, &sizeA, A);
+    lapackf77_slarnv(&ione, ISEED, &sizeB, B);
+    lapackf77_slarnv(&ione, ISEED, &sizeC, C);
     memcpy(C2, C, sizeC*sizeof(*C));
 
 #if defined(TESTING_AMDCLBLAS)
@@ -194,27 +194,27 @@ int main(int argc, char *argv[])
     magma_malloc((void**)(&bufA), sizeA*sizeof(*A));
     magma_malloc((void**)(&bufB), sizeB*sizeof(*B));
     magma_malloc((void**)(&bufC), sizeC*sizeof(*C));
-    magma_dsetmatrix(M, K, A, lda, bufA, lda);
-    magma_dsetmatrix(K, N, B, ldb, bufB, ldb);
-    magma_dsetmatrix(M, N, C, ldc, bufC, ldc);
+    magma_ssetmatrix(M, K, A, lda, bufA, lda);
+    magma_ssetmatrix(K, N, B, ldb, bufB, ldb);
+    magma_ssetmatrix(M, N, C, ldc, bufC, ldc);
 #endif
 
-    printf("dgemm %c%c%c : %4d %4d %4d",
+    printf("sgemm %c%c%c : %4d %4d %4d",
         (Order == CblasColMajor) ? 'C' : 'R',
         (TransA == CblasNoTrans) ? 'N' : 'T',
         (TransB == CblasNoTrans) ? 'N' : 'T',
         M, N, K);
 
-    double flops = FLOPS_DGEMM(M, N, K);
+    double flops = FLOPS_SGEMM(M, N, K);
 #if defined(TESTING_CUBLAS)
     cudaEventRecord(start, stream);
 #else
     start = my_get_current_time();
 #endif
     if (Order == CblasColMajor) {
-      DGEMM_COL();
+      SGEMM_COL();
     } else {
-      DGEMM_ROW();
+      SGEMM_ROW();
     }
 #if defined(TESTING_AMDCLBLAS)
     err = clFinish(queue);
@@ -236,14 +236,14 @@ int main(int argc, char *argv[])
 #elif defined(TESTING_CUBLAS)
       cudaMemcpy(C, bufC, sizeC*sizeof(*C), cudaMemcpyDeviceToHost);
 #elif defined(TESTING_MAGMA)
-      magma_dgetmatrix(M, N, bufC, ldc, C, ldc);
+      magma_sgetmatrix(M, N, bufC, ldc, C, ldc);
 #endif
-      cblas_dgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C2, ldc);
-      blasf77_daxpy(&sizeC, &neg_one, C, &ione, C2, &ione);
+      cblas_sgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C2, ldc);
+      blasf77_saxpy(&sizeC, &neg_one, C, &ione, C2, &ione);
 #if defined(TESTING_ACML)
-      error = lapackf77_dlange("M", &M, &N, C2, &ldc, work, ione);
+      error = lapackf77_slange("M", &M, &N, C2, &ldc, work, ione);
 #else
-      error = lapackf77_dlange("M", &M, &N, C2, &ldc, work);
+      error = lapackf77_slange("M", &M, &N, C2, &ldc, work);
 #endif
       printf(" : %10.6lf sec %12.6lf GFlop/s   %e", comp_time, perf, error);
     } else {
@@ -256,9 +256,9 @@ int main(int argc, char *argv[])
     start = my_get_current_time();
 #endif
     if (Order == CblasColMajor) {
-      DGEMM_COL();
+      SGEMM_COL();
     } else {
-      DGEMM_ROW();
+      SGEMM_ROW();
     }
 #ifdef TESTING_AMDCLBLAS
     err = clFinish(queue);

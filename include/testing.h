@@ -5,6 +5,7 @@
 #include <sys/resource.h>
 
 #define D_NEG_ONE (-1)
+#define S_NEG_ONE (-1)
 
 double my_get_current_time(void)
 {
@@ -41,13 +42,19 @@ void error_check_gemm(const double *C, const double *D, const int m, const int n
 #endif
 
 #define blasf77_daxpy      FORTRAN_NAME( daxpy,  DAXPY  )
+#define blasf77_saxpy      FORTRAN_NAME( saxpy,  SAXPY  )
 #define lapackf77_dlange   FORTRAN_NAME( dlange, DLANGE )
 #define lapackf77_dlarnv   FORTRAN_NAME( dlarnv, DLARNV )
+#define lapackf77_slange   FORTRAN_NAME( slange, SLANGE )
+#define lapackf77_slarnv   FORTRAN_NAME( slarnv, SLARNV )
 
 #if !defined(TESTING_ACML)
 void blasf77_daxpy(const int *n, const double *alpha, const double *x, const int *incx, double *y, const int *incy);
+void blasf77_saxpy(const int *n, const float *alpha, const float *x, const int *incx, float *y, const int *incy);
 double lapackf77_dlange(const char *norm, const int *m, const int *n, const double *A, const int *lda, double *work);
 void lapackf77_dlarnv(const int *idist, int *iseed, const int *n, double *x);
+float lapackf77_slange(const char *norm, const int *m, const int *n, const float *A, const int *lda, float *work);
+void lapackf77_slarnv(const int *idist, int *iseed, const int *n, float *x);
 #endif
 
 #endif // ifndef TESTING_H_

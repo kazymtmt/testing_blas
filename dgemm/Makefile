@@ -1,4 +1,4 @@
-include ../Makefile.var
+include ../Makefile.in
 
 TARGET	= testing_dgemm
 

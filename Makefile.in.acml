@@ -1,6 +1,6 @@
 BLASDIR	= /opt/acml5.1.0/gfortran64_fma4_mp
 
-CC	= gcc
+CC	= gcc-4.7
 #CXX	= g++
 
 OPTS	= -O2 -fopenmp -mfma4

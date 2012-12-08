@@ -46,8 +46,8 @@
 
 int main(int argc, char *argv[])
 {
-  static const double alpha =  0.29;
-  static const double beta  = -0.48;
+  static const double alpha =  0.27;
+  static const double beta  = -0.49;
   int ione = 1;
   int ISEED[4] = {1,0,0,1};
   double neg_one = D_NEG_ONE;

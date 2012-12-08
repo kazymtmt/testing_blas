@@ -4,7 +4,7 @@ MAX_SIZE = 8192
 TRIALS = 5
 
 def get_blaslib_name
-  open("../Makefile.var", "r") do |r|
+  open("../Makefile.in", "r") do |r|
     return r.gets.strip.scan(/\/([\w\-\.]+)\z/).to_s
   end
   return "unknown"
